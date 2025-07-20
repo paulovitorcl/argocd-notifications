@@ -1,0 +1,88 @@
+apiVersion: v1
+data:
+  context: |
+    argocdUrl: https://argocd.example.com  # Replace with your ArgoCD URL
+  service.github: |
+    appID: $githubAppID
+    installationID: $githubAppInstallationID
+    privateKey: $githubAppPrivateKey
+  subscriptions: |
+    - recipients:
+      - github
+      triggers:
+      - on-sync-running
+      - on-deployed
+      - on-sync-failed
+      - on-health-degraded
+  template.app-deployed: |
+    message: |
+      Application {{.app.metadata.name}} has been successfully deployed
+    github:
+      repoURLPath: "{{.app.spec.source.repoURL}}"
+      revisionPath: "{{.app.status.sync.revision}}"
+      deployment:
+        state: success
+        environment: "{{.app.metadata.labels.environment | default \"production\"}}"
+        environmentURL: "https://{{.app.metadata.name}}.example.com"
+        logURL: "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true"
+        requiredContexts: []
+        autoMerge: false
+        transientEnvironment: false
+  template.app-deploying: |
+    message: |
+      Application {{.app.metadata.name}} deployment is in progress
+    github:
+      repoURLPath: "{{.app.spec.source.repoURL}}"
+      revisionPath: "{{.app.status.sync.revision}}"
+      deployment:
+        state: in_progress
+        environment: "{{.app.metadata.labels.environment | default \"production\"}}"
+        environmentURL: "https://{{.app.metadata.name}}.example.com"
+        logURL: "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true"
+        requiredContexts: []
+        autoMerge: false
+        transientEnvironment: false
+  template.app-deployment-failed: |
+    message: |
+      Application {{.app.metadata.name}} deployment has failed
+    github:
+      repoURLPath: "{{.app.spec.source.repoURL}}"
+      revisionPath: "{{.app.status.sync.revision}}"
+      deployment:
+        state: failure
+        environment: "{{.app.metadata.labels.environment | default \"production\"}}"
+        environmentURL: "https://{{.app.metadata.name}}.example.com"
+        logURL: "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true"
+        requiredContexts: []
+        autoMerge: false
+        transientEnvironment: false
+  template.app-health-degraded: |
+    message: |
+      Application {{.app.metadata.name}} has degraded health status
+    github:
+      repoURLPath: "{{.app.spec.source.repoURL}}"
+      revisionPath: "{{.app.status.sync.revision}}"
+      deployment:
+        state: failure
+        environment: "{{.app.metadata.labels.environment | default \"production\"}}"
+        environmentURL: "https://{{.app.metadata.name}}.example.com"
+        logURL: "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true"
+        requiredContexts: []
+        autoMerge: false
+        transientEnvironment: false
+  trigger.on-deployed: |
+    - when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+      send: [app-deployed]
+  trigger.on-health-degraded: |
+    - when: app.status.health.status == 'Degraded'
+      send: [app-health-degraded]
+  trigger.on-sync-failed: |
+    - when: app.status.operationState.phase in ['Error', 'Failed']
+      send: [app-deployment-failed]
+  trigger.on-sync-running: |
+    - when: app.status.operationState.phase in ['Running']
+      send: [app-deploying]
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
