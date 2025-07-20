@@ -96,3 +96,5 @@ spec:
       prune: true
       selfHeal: true
 ```
+
+Reference doc: https://argo-cd.readthedocs.io/en/latest/operator-manual/notifications/services/github/
