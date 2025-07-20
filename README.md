@@ -4,6 +4,8 @@
 
 ## Step 2: Generate and download GitHub App key
 
+<img width="586" height="168" alt="image" src="https://github.com/user-attachments/assets/98eacbae-0310-4861-a943-0e3af68e5849" />
+
 ## Step 3: Create the Notification Secret
 
 Create a secret to store your GitHub token:
